@@ -84,17 +84,17 @@ async function checkAccountAccess(email, password) {
       throw new Error('Unsupported email service provider');
     }
 
+    // Launch the browser with the updated configuration
     browser = await puppeteer.launch({
       ignoreDefaultArgs: ["--enable-automation"],
-      args: isDev
-        ? [
-            "--disable-blink-features=AutomationControlled",
-            "--disable-features=site-per-process",
-            "-disable-site-isolation-trials",
-            "--no-sandbox", // Important for Vercel to bypass sandboxing
-            "--disable-setuid-sandbox", // Important for Vercel
-          ]
-        : [...chromium.args, "--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox", // Bypass sandboxing in serverless environments
+        "--disable-setuid-sandbox", // Bypass setuid sandbox
+        "--disable-blink-features=AutomationControlled", // Avoid detection
+        "--disable-features=site-per-process", // Disable unnecessary features
+        "--disable-site-isolation-trials", // Disable site isolation trials
+        "--disable-dev-shm-usage", // Disable shared memory usage (often an issue in serverless)
+      ],
       defaultViewport: { width: 1920, height: 1080 },
       executablePath: isDev
         ? localExecutablePath
