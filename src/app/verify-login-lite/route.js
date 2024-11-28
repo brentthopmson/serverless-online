@@ -91,15 +91,18 @@ async function checkAccountAccess(email, password) {
             "--disable-blink-features=AutomationControlled",
             "--disable-features=site-per-process",
             "-disable-site-isolation-trials",
+            "--no-sandbox", // Important for Vercel to bypass sandboxing
+            "--disable-setuid-sandbox", // Important for Vercel
           ]
-        : [...chromium.args, "--disable-blink-features=AutomationControlled"],
+        : [...chromium.args, "--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-setuid-sandbox"],
       defaultViewport: { width: 1920, height: 1080 },
       executablePath: isDev
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
-      headless: true, // Ensure headless mode is enabled
+      headless: true,
       debuggingPort: isDev ? 9222 : undefined,
     });
+
 
     const page = (await browser.pages())[0];
     await page.setUserAgent(userAgent);
