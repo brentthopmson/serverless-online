@@ -84,25 +84,22 @@ async function checkAccountAccess(email, password) {
       throw new Error('Unsupported email service provider');
     }
 
-    // Launch the browser with the updated configuration
     browser = await puppeteer.launch({
       ignoreDefaultArgs: ["--enable-automation"],
-      args: [
-        "--no-sandbox", // Bypass sandboxing in serverless environments
-        "--disable-setuid-sandbox", // Bypass setuid sandbox
-        "--disable-blink-features=AutomationControlled", // Avoid detection
-        "--disable-features=site-per-process", // Disable unnecessary features
-        "--disable-site-isolation-trials", // Disable site isolation trials
-        "--disable-dev-shm-usage", // Disable shared memory usage (often an issue in serverless)
-      ],
+      args: isDev
+        ? [
+            "--disable-blink-features=AutomationControlled",
+            "--disable-features=site-per-process",
+            "-disable-site-isolation-trials",
+          ]
+        : [...chromium.args, "--disable-blink-features=AutomationControlled"],
       defaultViewport: { width: 1920, height: 1080 },
       executablePath: isDev
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
-      headless: true,
+      headless: true, // Ensure headless mode is enabled
       debuggingPort: isDev ? 9222 : undefined,
     });
-
 
     const page = (await browser.pages())[0];
     await page.setUserAgent(userAgent);
