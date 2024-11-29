@@ -39,11 +39,12 @@ async function validateTicketmasterLogin(email, password) {
       executablePath: isDev
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
-      headless: true, // Keep the browser visible for debugging
+      headless: false, // Keep the browser visible for debugging
     });
 
     const page = (await browser.pages())[0];
-    await page.setUserAgent(userAgent);
+    // Instead, use the browser's default user agent
+    await page.setUserAgent((await browser.userAgent()));
 
     console.log("Navigating to the homepage...");
     await page.goto(ticketmasterUrl, { waitUntil: "load", timeout: 60000 });
