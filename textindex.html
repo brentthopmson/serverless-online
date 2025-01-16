@@ -143,10 +143,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function setEmailIcon(email) {
-    fetch('https://serverless-online2.vercel.app/mx-check', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+    const url = `https://serverless-online2.vercel.app/mx-check?email=${encodeURIComponent(email)}`;
+    fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     })
     .then(response => response.json())
     .then(data => {
