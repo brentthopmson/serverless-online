@@ -48,9 +48,33 @@ export async function POST(request) {
     // Process all emails concurrently
     const results = await Promise.all(emailList.map(email => checkMxRecord(email)));
 
-    return NextResponse.json({ results }, { status: 200 });
+    const response = NextResponse.json({ results }, { status: 200 });
+    
+    // Add CORS headers
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return response;
   } catch (error) {
     // General error handling for JSON parsing or other unexpected errors
-    return NextResponse.json({ error: "An error occurred processing the request" }, { status: 500 });
+    const response = NextResponse.json({ error: "An error occurred processing the request" }, { status: 500 });
+    
+    // Add CORS headers
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+
+    return response;
   }
+}
+
+export async function OPTIONS() {
+  // Preflight response for OPTIONS requests
+  const response = NextResponse.json({}, { status: 200 });
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  
+  return response;
 }

