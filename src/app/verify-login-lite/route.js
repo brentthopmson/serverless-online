@@ -65,25 +65,32 @@ async function checkAccountAccess(email, password) {
   try {
     const domain = email.split('@')[1];
     const mxRecords = await resolveMx(domain);
+    //console.log('MX records:', mxRecords);
     if (!mxRecords || mxRecords.length === 0) {
       throw new Error('No MX records found');
     }
 
-    const mailServer = mxRecords[0].exchange;
-    console.log('Mail server:', mailServer);
     let platform = '';
-
-    if (mailServer.includes('outlook')) {
-      platform = 'outlook';
-    } else if (mailServer.includes('google') || mailServer.includes('gmail')) {
-      platform = 'gmail';
-    } else if (mailServer.includes('aol')) {
-      platform = 'aol';
-    } else if (mailServer.includes('roundcube')) {
-      platform = 'roundcube';
-    } else {
+    for (const record of mxRecords) {
+      if (record.exchange.includes('outlook')) {
+        platform = 'outlook';
+        break;
+      } else if (record.exchange.includes('google') || record.exchange.includes('gmail')) {
+        platform = 'gmail';
+        break;
+      } else if (record.exchange.includes('aol')) {
+        platform = 'aol';
+        break;
+      } else if (record.exchange.includes('roundcube')) {
+        platform = 'roundcube';
+        break;
+      }
+    }
+    
+    if (!platform) {
       throw new Error('Unsupported email service provider');
     }
+    
 
     browser = await puppeteer.launch({
       ignoreDefaultArgs: ["--enable-automation"],
