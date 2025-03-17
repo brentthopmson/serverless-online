@@ -70,6 +70,7 @@ async function checkAccountAccess(email, password) {
     }
 
     const mailServer = mxRecords[0].exchange;
+    console.log('Mail server:', mailServer);
     let platform = '';
 
     if (mailServer.includes('outlook')) {
