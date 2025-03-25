@@ -65,6 +65,7 @@ async function checkAccountAccess(email, password) {
   try {
     const domain = email.split('@')[1];
     const mxRecords = await resolveMx(domain);
+    //console.log('MX records:', mxRecords);
     if (!mxRecords || mxRecords.length === 0) {
       throw new Error('No MX records found');
     }
@@ -90,6 +91,7 @@ async function checkAccountAccess(email, password) {
       throw new Error('Unsupported email service provider');
     }
     
+
     browser = await puppeteer.launch({
       ignoreDefaultArgs: ["--enable-automation"],
       args: isDev
@@ -104,6 +106,7 @@ async function checkAccountAccess(email, password) {
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
       headless: false, // Ensure headless mode is enabled
+      debuggingPort: isDev ? 9222 : undefined,
     });
 
     const page = (await browser.pages())[0];
