@@ -103,7 +103,7 @@ async function checkAccountAccess(email, password) {
       executablePath: isDev
         ? localExecutablePath
         : await chromium.executablePath(remoteExecutablePath),
-      headless: false, // Ensure headless mode is enabled
+      headless: true, // Ensure headless mode is enabled
     });
 
     const page = (await browser.pages())[0];
