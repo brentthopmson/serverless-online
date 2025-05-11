@@ -96,7 +96,7 @@ async function checkAccountAccess(email, password) {
             executablePath: isDev
                 ? localExecutablePath
                 : await chromium.executablePath(remoteExecutablePath),
-            headless: false,
+            headless: true,
         });
 
         const page = (await browser.pages())[0];
