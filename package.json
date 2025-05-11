@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@sparticuz/chromium-min": "^122.0.0",
     "@vercel/functions": "^1.5.1",
     "axios": "^1.7.7",
